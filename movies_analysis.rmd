@@ -1,0 +1,456 @@
+---
+title: "Movies"
+author: "Lucky Gbelode"
+date: "2022-10-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+### TABLE OF CONTENTS 
+  1.0 INTRODUCTION  
+  1.1 LOAD PACKAGES  
+  1.2 LOAD DATASETS   
+  1.3 BASIC STATISTICS OF DATASETS  
+  
+  2.0 DATA WRANGLING    
+  2.1 JOIN THE DATASETS  
+  2.2 EXTRACT WEEKDAY, MONTH, QUARTER AND YEAR FROM RELEASE DATE  
+  2.3 REMOVE DUPLICATES   
+  2.4 CLEANING GENRES, PRODUCTION COMPANIES AND PRODUCTION COUNTRIES COLUMNS   
+  2.5 REMOVE IRRELEVANT COLUMNS, CLEANING REVENUE AND BUDGET COLUMN     
+  2.6 CLASSIFY THE BUDGET COLUMNS     
+  2.6 CLASSIFY THE MOVIES   
+  
+  3.0 ANALYSIS  
+  3.1 COORELATION AND SUMMARY STATISTICS   
+  3.2 VARIABLES VALUES DISTRIBUTION  
+  3.3 MOVIES TRENDS    
+  3.4 TOP BUDGET MOVIES   
+  3.5 MOST POPULAR MOVIES   
+  3.6 TOP BUDGET AND REVENUE MOVIES    
+  3.7 TOP REVENUE GENERATING AND RATED MOVIES   
+  3.8 REVENUE AMD POPULAR MOVIES BY GENRE   
+  3.9 REVENUE BY QUARTER    
+  3.10 SUPERHIT AND BLOCKBUSTER MOVIES BY TOP PRODUCTION COMPANIES   
+  3.11  TOP NON-ENGLISH ORIGINAL LANGUAGE WITH SUPERHIT AND BLOCKBUSTER MOVIES   
+  3.12 YEAR WITH HIGHEST NUMBER OF PRODUCED FLOP MOVIES    
+  3.13 YEAR WITH HIGHEST NUMBER OF PRODUCED SUPERHIT MOVIES    
+  3.14 SUPERHIT MOVIES GENRE DISTRIBUTION   
+               
+  4.0 CONCLUSION   
+  
+ 
+### 1.0 INTRODUCTION  
+The data sets are available in Kaggle, they  consist of movies released on or before July 2017.  This analysis will explore this data sets to gain some useful insights. Included in the data sets are information on the movies cast, crew, plot keywords, budget, revenue, posters, release dates, languages, production companies, countries, TMDB vote counts and vote averages.
+
+
+#### 1.1 LOAD PACKAGES
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+
+#### 1.2 LOAD DATASETS
+```{r}
+ratings<- read_csv("ratings_small.csv")
+movies <- read_csv("movies_metadata.csv")
+```
+
+
+#### 1.3 BASIC STATISTICS OF DATASETS
+```{r}
+str(movies)
+dim(movies)
+str(ratings)
+str(ratings)
+```
+
+### 2.0 DATA WRANGLING  
+#### 2.1  JOIN THE DATASETS   
+```{r}
+movies <- merge( movies, ratings, by.x = 'id', by.y = 'movieId')
+```
+
+#### 2.2 EXTRACT WEEKDAY, MONTH, QUARTER AND YEAR FROM RELEASE DATE    
+```{r}
+movies <- movies %>%
+  mutate( weekday = wday(release_date),
+          month = month(release_date),
+          quarter = quarter(release_date),
+          year = year(release_date))
+```
+
+#### 2.3 REMOVE DUPLICATES    
+```{r}
+movies <- distinct( movies, original_title, .keep_all = TRUE)
+```
+
+
+#### 2.4 CLEANING GENRES, PRODUCTION COMPANIES AND PRODUCTION COUNTRIES COLUMNS
+```{r}
+movies <- movies %>%
+  separate(genres, into = c("a","b", "c","d","e","genres"), sep = "'") %>%
+  select(-a, -b, -c, -d, -e)
+
+movies3 <- movies %>%
+  separate(production_companies, into = c("a","b", "c","production_companies"), sep = "'") %>%
+  select(-a, -b, -c)
+
+movies5 <- movies3 %>%
+  separate(production_countries, into = c("a","b", "c","production_countries"), sep = "'") %>%
+  select(-a, -b, -c)
+
+```
+
+
+#### 2.5 REMOVING IRRELEVANT COLUMNS, CLEANING REVENUE AND BUDGET COLUMN 
+```{r}
+movies <- movies5 %>%
+  select(-adult,-belongs_to_collection, -homepage, -overview, -poster_path, -spoken_languages,-tagline, -video, -userId)
+movies <- movies %>%  
+   filter(budget != 0, revenue != 0)
+  
+```
+
+
+#### 2.6 CLASSIFY THE BUDGET COLUMNS   
+ * Budget greater than $100m are classified as Super Big Budget.  
+ * Budget between $50m & $100m are classified as Big Budget.  
+ * Budget between $10m & $50m are classified as Medium Budget.  
+ * Budget less than $10m are classified as Small Budget.  
+ 
+```{r}
+movies <- movies %>%
+  mutate(budget_classification = 
+           ifelse(budget > 100000000, "Super_Big_Budget",
+           ifelse( budget > 50000000, "Big_Budget",
+           ifelse( budget > 0000000, "Mediun_Budget","Small_Budget"))))
+
+```
+
+#### 2.6 CLASSIFY THE MOVIES  
+ * Movies whose Revenue is four times greater than its budget are classified as Superhit.  
+  * Movies whose Revenue is two and half times greater than its budget are classified as Blockbuster.  
+   * Movies whose Revenue is one and half times greater than its budget are classified as Minor Success.  
+  * Movies whose Revenue is same or less than its budget are classified as Flop.  
+    
+```{r}
+# classifying the movies
+movies <- movies %>%
+  mutate(movie_classification = 
+           ifelse(revenue > 4*budget, "Superhit",
+           ifelse(revenue > 2.5*budget, "Blockbuster",
+           ifelse(revenue > 1.5*budget, "Minor_Success","Flop"))))
+```
+
+### 3.0  ANALYSIS  
+#### 3.1 COORELATION AND SUMMARY STATISTICS   
+
+```{r}
+movies_num <- movies %>%
+  select (rating, budget, popularity,revenue, runtime
+          ,vote_average, vote_count)
+movies_sum <- summary(movies_num)
+movies_cor <- cor(movies_num)
+movies_sum
+movies_cor
+```
+
+#### 3.2  VARIABLES VALUES DISTRIBUTION   
+ * Ratings distribution   
+ * Budget distribution  
+ * Popularity distribution    
+ * Release date distribution  
+ * Runtime distribution    
+ * Genre distribution    
+ * Original language distribution   
+ * Production Companies   
+ * Production Countries  
+
+```{r}
+
+ggplot( data = movies, aes(x = rating)) +
+  geom_histogram( binwidth = 1  , fill = "orange", color = "black") +
+  ggtitle(" RATINGS DISTRIBUTION")
+
+ggplot( data = movies, aes(x = rating)) +
+  geom_boxplot(fill = "orange", color = "black") +
+  ggtitle(" RATINGS DISTRIBUTION")
+
+ggplot( data = movies, aes( x = budget )) +
+  geom_histogram(fill = "orange", color = "black") +
+  ggtitle(" BUDGET DISTRIBUTION")
+
+ggplot( data = movies, aes( x = budget )) +
+  geom_boxplot(fill = "orange", color = "black") +
+  ggtitle(" BUDGET DISTRIBUTION")
+
+ggplot( data = movies, aes( x = popularity)) +
+  geom_histogram(fill = "orange", color = "black") +
+  ggtitle(" POPULARITY DISTRIBUTION")
+
+ggplot( data = movies, aes( x = popularity)) +
+  geom_boxplot(fill = "orange", color = "black") +
+  ggtitle(" POPULARITY DISTRIBUTION")
+
+ggplot( data= movies, aes( x = release_date)) +
+  geom_boxplot(fill = "orange", color = "black") +
+  ggtitle(" RELEASE DATE DISTRIBUTION")
+
+ggplot( data= movies, aes( x = release_date)) +
+  geom_histogram(fill = "orange", color = "black") +
+  ggtitle(" RELEASE DATE DISTRIBUTION")
+
+ggplot( data= movies, aes( x = runtime)) +
+  geom_boxplot(fill = "orange", color = "black") +
+  ggtitle(" RUNTIME DISTRIBUTION")
+
+ggplot( data= movies, aes( x = runtime)) +
+  geom_histogram(fill = "orange", color = "black") +
+  ggtitle(" RUNTIME DISTRIBUTION")
+
+movie_genre <- movies %>%
+  group_by(genres) %>%
+  summarise(frequency = n())%>%
+  arrange(desc(frequency))%>%
+  filter(genres != "NA")
+ggplot(data = movie_genre, aes(x = reorder(genres, frequency), y = frequency)) +
+  geom_bar( stat = "identity" ,fill = "orange", color = "black") +
+  coord_flip() +
+  xlab("genre") +
+  ggtitle(" GENRE DISTRIBUTION")
+
+movie_lang <- movies %>%
+  group_by(original_language) %>%
+  summarise(frequency = n())%>%
+  arrange(desc(frequency))%>%
+  filter(frequency >10)
+
+ggplot(data = movie_lang, aes(x = reorder(original_language, frequency), y = frequency)) +
+  geom_bar( stat = "identity" ,fill = "orange", color = "black") +
+  coord_flip() +
+  xlab(  "original language") +
+  ggtitle(" ORIGINAL LANGUAGE DISTRIBUTION")
+
+movie_companies <- movies %>%
+  group_by(production_companies) %>%
+  summarise(frequency = n())%>%
+  filter(frequency >10 & production_companies != "NA") %>%
+  arrange(desc(frequency))
+
+ggplot(data = movie_companies, aes(x = reorder(production_companies, frequency), y = frequency)) +
+  geom_bar( stat = "identity" ,fill = "orange", color = "black") +
+  coord_flip() +
+  xlab(  "production companies" ) +
+  ggtitle("PRODUCTION COMPANIES DISTRIBUTION")
+
+top_countries <- movies %>%
+  group_by(production_countries) %>%
+  filter(production_countries != "NA")%>%
+  summarise( count = n()) %>%
+  arrange(desc(count)) %>%
+  head(10)
+
+ggplot( data= top_countries, aes( x = reorder(production_countries, count), y = count)) +
+  geom_bar(stat = "identity", fill = "orange", color = "black") +
+    xlab(  "production_countries" ) +
+  coord_flip() +
+ggtitle("TOP PRODUCTION COUNTRIES DISTRIBUTION")
+
+```
+
+#### 3.3 MOVIES TRENDS   
+* Budget trend   
+* Revenue trend   
+
+```{r}
+ggplot( data = movies, aes( x = year ,y = budget, color = genres)) +
+  geom_point() +
+  theme(legend.position = "right") +
+  ggtitle("BUDGET TREND")
+
+revenue_trend <- movies %>%
+  select(year, revenue) %>%
+  group_by(year)%>%
+  summarise(revenue = sum(revenue))%>%
+  filter( year > 1990)
+ggplot( data = revenue_trend, aes( x = year ,y = revenue)) +
+  geom_col(fill = "orange", color = "black") +
+  ggtitle("REVENUE TREND")
+
+```
+
+#### 3.4  TOP BUDGET MOVIES   
+
+```{r}
+top_budget <- movies  %>%
+  select( original_title, budget) %>%
+  arrange(desc(budget))
+top_budget_movies <- head(top_budget, 10)
+ggplot(data = top_budget_movies, aes(x = reorder(original_title, budget), y = budget)) +
+  geom_col(fill = "orange", color = "black") +
+    xlab(  "original_title" ) +
+  coord_flip() +
+ggtitle(" TOP BUDGET MOVIES")
+```
+
+
+#### 3.5  MOST POPULAR MOVIES   
+
+```{r}
+most_popular <- movies  %>%
+  select( original_title, popularity) %>%
+  arrange(desc(popularity))
+most_popular_movies <- head(most_popular, 10)
+ggplot(data = most_popular_movies, aes(x = reorder(original_title, popularity), y = popularity)) +
+  geom_col(fill = "orange", color = "black") +
+    xlab(  "original_title" ) +
+  coord_flip()+
+ggtitle(" MOST POPULAR MOVIES")
+```
+
+#### 3.6 TOP BUDGET AND REVENUE MOVIES    
+
+```{r}
+budget_revenue <- movies  %>%
+  select( original_title, budget, revenue, genres, rating) %>%
+  arrange(desc(budget))
+ggplot(data = budget_revenue, aes(x =  budget, y = revenue, color = genres)) +
+  geom_point() +
+  theme(legend.position = "right") +
+  ggtitle(" TOP BUDGET AND REVENUE MOVIES BY GENRE")
+```
+
+#### 3.7 TOP REVENUE GENERATING AND RATED MOVIES   
+
+```{r}
+top_revenue_rating <- movies  %>%
+  select( original_title, budget, genres, revenue, rating) %>%
+  arrange(desc(revenue))
+ggplot(data = top_revenue_rating, aes(y =  revenue, x= rating, fill= genres ))+
+  geom_col( stat= "identity") +
+  ggtitle(" REVENUE AND RATING MOVIES BY GENRE")
+
+```
+
+#### 3.8 REVENUE AMD POPULAR MOVIES BY GENRE   
+
+```{r}
+top_popular_revenue <- movies  %>%
+  select( original_title, revenue,genres,popularity) %>%
+  arrange(desc(popularity))
+ggplot(data = top_popular_revenue, aes( x =  popularity, y= revenue, fill= genres ))+
+  geom_point() +
+  ggtitle(" REVENUE AND POPULARITY MOVIES BY GENRE")
+
+```
+
+#### 3.9 REVENUE BY QUARTER   
+
+```{r}
+revenue_quarter <- movies %>%
+  select( quarter, revenue) %>%
+  group_by (quarter) %>%
+  summarise( revenue = sum(revenue))%>%
+  filter( quarter != "NA")
+ggplot(data =revenue_quarter, aes( x= quarter, y =  revenue))+
+  geom_col(  fill= "orange", color = "black") +
+  ggtitle(" REVENUE BY QUARTER")
+
+```
+
+#### 3.10 SUPERHIT AND BLOCKBUSTER MOVIES BY TOP PRODUCTION COMPANIES   
+
+```{r}
+companies <- movies %>%
+  filter( movie_classification == "Superhit" |
+            movie_classification == "Blockbuster")%>%
+  group_by(production_companies) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  head(10)
+ggplot( data = companies, aes( x= reorder(production_companies, count),
+                               y= count)) +
+  geom_bar( stat = "identity", color = "black", fill = "orange") +
+  coord_flip() +
+  labs(x = "Production Companies") +
+  ggtitle(" Top Production Companies")
+```
+
+#### 3.11  TOP NON-ENGLISH ORIGINAL LANGUAGE WITH SUPERHIT AND BLOCKBUSTER MOVIES   
+
+```{r}
+non_english <- movies %>%
+  filter(original_language != "en",
+         movie_classification == "Superhit" |
+           movie_classification == "Blockbuster") %>%
+  group_by(original_language) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  head(10)               
+ggplot( data = non_english, aes( x= reorder(original_language, count),
+                                 y= count)) +
+  geom_bar( stat = "identity", color = "black", fill = "orange") +
+  coord_flip() +
+  labs(x = "Original Languages")
+ggtitle(" Top Original Language")
+```
+
+#### 3.12 YEAR WITH HIGHEST NUMBER OF PRODUCED FLOP MOVIES  
+
+```{r}
+
+flop <- movies %>%
+  filter( movie_classification == "Flop" ) %>%
+  group_by(year) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+ggplot( data = flop, aes( x= year, y= count)) +
+  geom_line() +
+  ggtitle(" Flop Movies Trend")
+
+```
+
+#### 3.13 YEAR WITH HIGHEST NUMBER OF PRODUCED SUPERHIT MOVIES  
+
+```{r}
+superhit <- movies %>%
+  filter( movie_classification == "Superhit" ) %>%
+  group_by(year) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+ggplot( data = superhit, aes( x= year, y= count)) +
+  geom_line() +
+  ggtitle(" Superhit Movies Trend")
+```
+
+#### 3.14 SUPERHIT MOVIES GENRE DISTRIBUTION   
+
+```{r}
+genre <- movies %>%
+  filter( movie_classification == "Superhit", genres != "NA") %>%
+  group_by(genres) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+ggplot( data = genre, aes( x= reorder(genres, count),
+                           y= count)) +
+  geom_bar( stat = "identity", color = "black", fill = "orange") +
+  coord_flip() +
+  labs(x = "Genres")
+ggtitle(" Superhit Movies Genre")
+```
+
+### 4.0 CONCLUSION   
+* Most movies receive a rating that is between the range of 3 and 4.    
+* Most movies can be classified as low and middle budget movies.    
+* Movies production has steadily increasing.   
+* Most movies have a run time that is between 100 minutes and 120 minutes.   
+* The USA and English Language overwhelmingly dominate movies production.   
+* Paramounts Pictures and Universal Pictures are the two top movies production companies. They are responsible for a large portion of Super hit and  Blockbuster movies.   
+* Spanish is the second original language after English Language with most super hit movies.   
+* Drama is the dominant genre.   
+* Movies budget and revenue has been increasing over the years.  
