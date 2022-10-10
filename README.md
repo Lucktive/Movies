@@ -1,5 +1,5 @@
 # Movies
-This is a Data Analysis project using R. Dashboard is done with R flexdashboard.
+This is a Data Analysis project using R. Dashboard is done with R flexdashboard. Data sets are available in Kaggle.
 
 DATA WRANGLING: Data Wrangling is done to get an error free Data Analysis and high quality data for further analysis. The data tables were merged, date components were extracted from the date variable, duplicates and irrelevant variables were removed. Finally, Movies were categorized based on the ratio of the generated revenue to the Movies budget and the Movies budget were also classified. This gives a unique perspective on the data. 
 
